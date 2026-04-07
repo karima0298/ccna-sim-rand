@@ -88,41 +88,43 @@
                 scenarios.filter(scene => scene.id !== 'free').forEach(scene => {
                     // 変更: <a>タグではなく<div>タグでカードを作成
                     const card = document.createElement('div');
-                    card.className = 'scenario-card';
+card.className = 'scenario-card';
+if (scene.image) {
+    const img = document.createElement('img');
+    img.src = scene.image;
+    img.className = 'scenario-thumbnail';
+    card.appendChild(img);
+}
+const title = document.createElement('h3');
+title.textContent = scene.title;
+card.appendChild(title);
 
-                    if (scene.image) {
-                        const img = document.createElement('img');
-                        img.src = scene.image;
-                        img.alt = scene.title;
-                        img.className = 'scenario-thumbnail';
-                        card.appendChild(img);
-                    }
+const btnGroup = document.createElement('div');
+btnGroup.className = 'button-group';
 
-                    const title = document.createElement('h3');
-                    title.textContent = scene.title;
-                    card.appendChild(title);
+// 試験モード(generateVars)があるか判定
+if (scene.generateVars && typeof scene.generateVars === 'function') {
+    const btnExam = document.createElement('a');
+    btnExam.className = 'mode-btn btn-exam';
+    btnExam.href = `simulator.html?scenario=${scene.id}&mode=exam`;
+    btnExam.textContent = '試験モード';
+    btnGroup.appendChild(btnExam);
+} else {
+    const btnNormal = document.createElement('a');
+    btnNormal.className = 'mode-btn btn-normal';
+    btnNormal.href = `simulator.html?scenario=${scene.id}`;
+    btnNormal.textContent = '本番モード';
+    btnGroup.appendChild(btnNormal);
+}
 
-                    // 追加: ボタンをまとめるグループを作成
-                    const btnGroup = document.createElement('div');
-                    btnGroup.className = 'button-group';
+const btnPractice = document.createElement('a');
+btnPractice.className = 'mode-btn btn-practice';
+btnPractice.href = `simulator.html?scenario=${scene.id}&mode=practice`;
+btnPractice.textContent = '練習モード';
+btnGroup.appendChild(btnPractice);
 
-                    // 追加: 本番モードボタン
-                    const btnNormal = document.createElement('a');
-                    btnNormal.className = 'mode-btn btn-normal';
-                    btnNormal.href = `simulator.html?scenario=${scene.id}`;
-                    btnNormal.textContent = '本番モード';
-
-                    // 追加: 練習モードボタン（URLに &mode=practice を付与）
-                    const btnPractice = document.createElement('a');
-                    btnPractice.className = 'mode-btn btn-practice';
-                    btnPractice.href = `simulator.html?scenario=${scene.id}&mode=practice`;
-                    btnPractice.textContent = '練習モード';
-
-                    btnGroup.appendChild(btnNormal);
-                    btnGroup.appendChild(btnPractice);
-                    
-                    card.appendChild(btnGroup);
-                    listEl.appendChild(card);
+card.appendChild(btnGroup);
+listEl.appendChild(card);
                 });
             }
         });
