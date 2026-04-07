@@ -339,7 +339,8 @@ Sw1(config-if-range)#switchport trunk allowed 12`,
     answers: [
 `Sw1,Sw2(config)# vlan 77
 Sw1,Sw2(config-vlan)# name User_VLAN
-Sw1,Sw2(config-vlan)# vlan 177
+Sw1,Sw2(config-vlan)# exit
+Sw1,Sw2(config)# vlan 177
 Sw1,Sw2(config-vlan)# name Voice_VLAN
 Sw1,Sw2(config-vlan)# exit`,
 
