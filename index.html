@@ -54,17 +54,17 @@
         const currentUrlParams = new URLSearchParams(window.location.search);
         const providedKey = currentUrlParams.get('key');
 
-        if (providedKey === SECRET_KEY) {
-            // 合言葉が一致した場合：認証済みとして記録し、URLから合言葉を消去
-            sessionStorage.setItem('isSimulatorAuth', 'true');
-            currentUrlParams.delete('key');
-            const newUrl = window.location.pathname + (currentUrlParams.toString() ? '?' + currentUrlParams.toString() : '');
-            window.history.replaceState(null, null, newUrl);
-            
-        } else if (sessionStorage.getItem('isSimulatorAuth') !== 'true') {
-            // 合言葉がなく、認証記録もない場合：元のサイトへ強制送還
-            window.top.location.href = RETURN_URL;
-        }
+        #if (providedKey === SECRET_KEY) {
+        #    // 合言葉が一致した場合：認証済みとして記録し、URLから合言葉を消去
+        #    sessionStorage.setItem('isSimulatorAuth', 'true');
+        #    currentUrlParams.delete('key');
+        #    const newUrl = window.location.pathname + (currentUrlParams.toString() ? '?' + currentUrlParams.toString() : '');
+        #    window.history.replaceState(null, null, newUrl);
+        #    
+        #} else if (sessionStorage.getItem('isSimulatorAuth') !== 'true') {
+        #    // 合言葉がなく、認証記録もない場合：元のサイトへ強制送還
+        #    window.top.location.href = RETURN_URL;
+        #}
     </script>
     <script src="js/scenario_data.js"></script>
 </head>
