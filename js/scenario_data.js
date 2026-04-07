@@ -574,38 +574,49 @@ SW-2(config-if)# channel-group 12 mode passive`
     ]
   }
 // -------------------------------------------------------------
-// 【試験】問題④: IPv4 & IPv6 アドレス設定 (ランダム化)
-// -------------------------------------------------------------
-{
-  id: "new_q4_exam",
-  title: "【試験】IPv4 & IPv6 アドレス設定",
-  image: "img/new_q4_base.png", // 文字を消した背景画像
-  description: `指定されたサブネットを使用して、R1およびR2のインターフェースに適切なIPアドレスを設定してください。`,
-  generateVars: () => {
-    const fourth = Math.floor(Math.random() * 63) * 4 + 4; 
-    const hex = Math.floor(Math.random() * 16).toString(16);
-    return {
-      ipv4Subnet: `10.0.12.${fourth}/30`,
-      r1Ipv4: `10.0.12.${fourth + 1}`,
-      r2Ipv4: `10.0.12.${fourth + 2}`,
-      ipv6Subnet: `2001:db8:12:${hex}::/126`,
-      r1Ipv6: `2001:db8:12:${hex}::1/126`,
-      r2Ipv6: `2001:db8:12:${hex}::3/126`
-    };
-  },
-  getTasks: (v) => [
-    `R1に、IPv4 <strong>${v.ipv4Subnet}</strong> の最初のアドレスを設定。<br>R2に、同ネットワークの最後のアドレスを設定。`,
-    `R1に、IPv6 <strong>${v.ipv6Subnet}</strong> の最初のアドレスを設定。<br>R2に、同ネットワークの最後のアドレスを設定。`
-  ],
-  getValidations: (v) => [
-    { device: "R1", path: "runningConfig.interfaces.Ethernet0/0.ip", expected: v.r1Ipv4, message: `R1 IPv4不一致` },
-    { device: "R2", path: "runningConfig.interfaces.Ethernet0/0.ip", expected: v.r2Ipv4, message: `R2 IPv4不一致` }
-  ],
-  getAnswers: (v) => [
-    `R1(config-if)#ip address ${v.r1Ipv4} 255.255.255.252\nR2(config-if)#ip address ${v.r2Ipv4} 255.255.255.252`,
-    `R1(config-if)#ipv6 address ${v.r1Ipv6}\nR2(config-if)#ipv6 address ${v.r2Ipv6}`
-  ],
-  devices: [{ name: "R1", type: "router", physicalPorts: ["Ethernet0/0"] }, { name: "R2", type: "router", physicalPorts: ["Ethernet0/0"] }]
-}
-  
-]; // ← シナリオ配列の閉じカッコ
+  // 【新】問題⑨: OSPFプロセスの設定（インターフェースベース）
+  // -------------------------------------------------------------
+  {
+    id: "new_q9",
+    title: "【新】問題⑨",
+    // ...中略...
+    validations: [
+      // ...中略...
+    ]
+  }, // ★ここにカンマを追加
+
+  // -------------------------------------------------------------
+  // 【試験】問題④: IPv4 & IPv6 アドレス設定 (ランダム化)
+  // -------------------------------------------------------------
+  {
+    id: "new_q4_exam",
+    title: "【試験】IPv4 & IPv6 アドレス設定",
+    image: "img/new_q4.png", 
+    description: `<p>指定されたサブネットを使用して、R1およびR2のインターフェースに適切なIPアドレスを設定してください。</p>`,
+    generateVars: () => {
+      const fourth = Math.floor(Math.random() * 63) * 4 + 4; 
+      const hex = Math.floor(Math.random() * 16).toString(16);
+      return {
+        ipv4Subnet: `10.0.12.${fourth}/30`,
+        r1Ipv4: `10.0.12.${fourth + 1}`,
+        r2Ipv4: `10.0.12.${fourth + 2}`,
+        ipv6Subnet: `2001:db8:12:${hex}::/126`,
+        r1Ipv6: `2001:db8:12:${hex}::1/126`,
+        r2Ipv6: `2001:db8:12:${hex}::3/126`
+      };
+    },
+    getTasks: (v) => [
+      `R1に、IPv4 <strong>${v.ipv4Subnet}</strong> の最初のIPを設定してください。<br>R2に、同ネットワークの最後のアドレスを設定してください。`,
+      `R1に、IPv6 <strong>${v.ipv6Subnet}</strong> の最初のIPを設定してください。<br>R2に、同ネットワークの最後のアドレスを設定してください。`
+    ],
+    getValidations: (v) => [
+      { device: "R1", path: "runningConfig.interfaces.Ethernet0/0.ip", expected: v.r1Ipv4, message: `R1 IPv4不一致` },
+      { device: "R2", path: "runningConfig.interfaces.Ethernet0/0.ip", expected: v.r2Ipv4, message: `R2 IPv4不一致` }
+    ],
+    getAnswers: (v) => [
+      `R1(config-if)#ip address ${v.r1Ipv4} 255.255.255.252\nR2(config-if)#ip address ${v.r2Ipv4} 255.255.255.252`,
+      `R1(config-if)#ipv6 address ${v.r1Ipv6}\nR2(config-if)#ipv6 address ${v.r2Ipv6}`
+    ],
+    devices: [{ name: "R1", type: "router", physicalPorts: ["Ethernet0/0"] }, { name: "R2", type: "router", physicalPorts: ["Ethernet0/0"] }]
+  }
+]; // ★配列の閉じカッコはここ★
