@@ -99,9 +99,13 @@ const defaultRouterStateTemplate = {
 // アプリケーション状態管理
 const appState = {
     currentScenarioId: null,
-    currentDeviceName: null, // 現在操作中のデバイス名
-    devices: {}, // { "SW1": stateObj, "R1": stateObj }
-    pendingStateSave: null // 状態保存待ちの許容
+    currentDeviceName: null,
+    devices: {},
+    pendingAction: null,
+    examVars: null,         // 追加
+    currentTasks: null,     // 追加
+    currentValidations: null, // 追加
+    sshSourceDevice: null
 };
 
 // iframeのロード待ち
