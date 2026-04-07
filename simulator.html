@@ -72,10 +72,16 @@
                 </div>
                 <div id="topology" class="tab-content">
                     <h2 class="content-title">Topology</h2>
-                    <div class="topology-container">
-                        <img id="scenario-image" src="" alt="Topology" style="display:none;">
+                    <div class="topology-area" style="text-align: center; padding: 20px;">
+                        <img id="scenario-image" src="" alt="Topology" style="max-width: 100%; height: auto; display: none;">
+        
+                        <div id="topology-container" style="position: relative; display: inline-block; display: none;">
+                            <img id="scenario-image-base" src="" alt="Topology Base" style="max-width: 100%; height: auto;">
+                            <span id="topo-q4-ipv4" style="position: absolute; top: 41.5%; left: 63.5%; color: red; font-size: 13px; font-weight: bold; transform: rotate(-10deg);"></span>
+                            <span id="topo-q4-ipv6" style="position: absolute; top: 49.5%; left: 63.5%; color: purple; font-size: 13px; font-weight: bold; transform: rotate(-10deg);"></span>
                     </div>
                 </div>
+            </div>
                 <div id="tasks" class="tab-content">
                     <h2 class="content-title">Tasks</h2>
                     <div id="scenario-tasks" class="scrollable-content">
