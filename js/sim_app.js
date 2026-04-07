@@ -450,23 +450,80 @@ function initScenario(scenarioId) {
 
     appState.currentScenarioId = scenarioId;
     appState.devices = {};
+    appState.examVars = null;
+    
+    // デフォルトのタスクと判定をセット
+    appState.currentTasks = scenario.tasks;
+    appState.currentValidations = scenario.validations;
 
-    // デバイスリストUIの構築 (Right Pane Header)
+    // URLパラメータからモード判定
+    const isPracticeMode = new URLSearchParams(window.location.search).get('mode') === 'practice';
+    const isExamMode = new URLSearchParams(window.location.search).get('mode') === 'exam';
+
+    // 試験モード：ランダム変数の生成
+    if (isExamMode && typeof scenario.generateVars === 'function') {
+        appState.examVars = scenario.generateVars();
+        appState.currentTasks = scenario.getTasks(appState.examVars);
+        appState.currentValidations = scenario.getValidations(appState.examVars);
+    }
+
+    // ガイドライン・構成図の表示
+    document.getElementById('scenario-desc').innerHTML = scenario.description || scenario.desc || '';
+    const staticImg = document.getElementById('scenario-image');
+    const dynamicContainer = document.getElementById('topology-container');
+    
+    if (isExamMode && appState.examVars && dynamicContainer && scenarioId === 'new_q4_exam') {
+        staticImg.style.display = 'none';
+        dynamicContainer.style.display = 'inline-block';
+        document.getElementById('scenario-image-base').src = scenario.image;
+        document.getElementById('topo-q4-ipv4').textContent = appState.examVars.ipv4Subnet;
+        document.getElementById('topo-q4-ipv6').textContent = appState.examVars.ipv6Subnet;
+    } else {
+        if (dynamicContainer) dynamicContainer.style.display = 'none';
+        staticImg.src = scenario.image || '';
+        staticImg.style.display = scenario.image ? 'block' : 'none';
+    }
+
+    // タスク表示（既存のtasksHtmlを最優先で維持）
+    const tasksEl = document.getElementById('scenario-tasks');
+    if (tasksEl) {
+        if (scenario.tasksHtml) {
+            tasksEl.innerHTML = scenario.tasksHtml;
+        } else if (appState.currentTasks) {
+            let html = '<ol>';
+            appState.currentTasks.forEach((t, i) => {
+                html += `<li>${t}</li>`;
+                if (isPracticeMode) {
+                    let ans = (appState.examVars && scenario.getAnswers) ? 
+                              scenario.getAnswers(appState.examVars)[i] : (scenario.answers ? scenario.answers[i] : null);
+                    if (ans) html += `<div class="command-hint-box"><span class="command-hint-label">💡 解答コマンド</span><pre class="command-hint-code">${ans}</pre></div>`;
+                }
+            });
+            html += '</ol>';
+            tasksEl.innerHTML = html;
+        }
+    }
+
+    // デバイスリスト構築（既存ロジック）
     const deviceListEl = document.getElementById('device-list');
     deviceListEl.innerHTML = '';
-
-    // 左ペインのコンテンツ更新
-    const descEl = document.getElementById('scenario-desc');
-    if (descEl) descEl.innerHTML = scenario.description || scenario.desc || '';
-
-    const imgEl = document.getElementById('scenario-image');
-    if (scenario.image) {
-        imgEl.src = scenario.image;
-        imgEl.style.display = 'block';
-    } else {
-        imgEl.style.display = 'none';
-        imgEl.src = '';
+    scenario.devices.forEach((dev, index) => {
+        let state = deepCopy(dev.type === 'switch' ? defaultSwitchStateTemplate : defaultRouterStateTemplate);
+        state.hostname = dev.name;
+        state.runningConfig.hostname = dev.name;
+        appState.devices[dev.name] = { type: dev.type, state: state };
+        const btn = document.createElement('button');
+        btn.textContent = dev.name;
+        btn.className = 'device-tab-btn';
+        btn.onclick = () => limitSwitchDevice(dev.name);
+        if (index === 0) btn.classList.add('active');
+        deviceListEl.appendChild(btn);
+    });
+    if (scenario.devices.length > 0) {
+        appState.currentDeviceName = scenario.devices[0].name;
+        if (engineReady) loadDeviceToEngine(appState.currentDeviceName);
     }
+}
 
     // 判定ログクリア (Validationタブ内)
     const logEl = document.getElementById('validation-log');
