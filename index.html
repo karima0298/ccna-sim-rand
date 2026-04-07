@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCNA Simulator - Start</title>
+    <link rel="stylesheet" href="css/style.css">
+    
+    <style>
+        /* 追加: カード内のボタン用スタイル */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .mode-btn {
+            flex: 1;
+            text-align: center;
+            padding: 10px 5px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .btn-normal {
+            background-color: #0066cc;
+            color: white;
+            border: 1px solid #0055aa;
+        }
+        .btn-normal:hover {
+            background-color: #0055aa;
+        }
+        .btn-practice {
+            background-color: #4CAF50; /* 練習モードは緑色など区別しやすい色に */
+            color: white;
+            border: 1px solid #45a049;
+        }
+        .btn-practice:hover {
+            background-color: #45a049;
+        }
+        /* カード自体がリンクだった場合の名残を消すための調整 */
+        .scenario-card {
+            display: flex;
+            flex-direction: column;
+            cursor: default; /* カード全体のマウスポインタを通常に */
+        }
+    </style>
+
+    <script>
+        const SECRET_KEY = "actias22"; // ① ここに任意の合言葉（半角英数字）を設定してください
+        const RETURN_URL = "https://script.google.com/macros/s/AKfycbwuT4rJ6aV2Gi-cOVayvDuvMSuu69w35fb6u7XfXsVJ/dev"; // ② 追い返す先のGASのURLを設定してください
+        
+        const currentUrlParams = new URLSearchParams(window.location.search);
+        const providedKey = currentUrlParams.get('key');
+
+        if (providedKey === SECRET_KEY) {
+            // 合言葉が一致した場合：認証済みとして記録し、URLから合言葉を消去
+            sessionStorage.setItem('isSimulatorAuth', 'true');
+            currentUrlParams.delete('key');
+            const newUrl = window.location.pathname + (currentUrlParams.toString() ? '?' + currentUrlParams.toString() : '');
+            window.history.replaceState(null, null, newUrl);
+            
+        } else if (sessionStorage.getItem('isSimulatorAuth') !== 'true') {
+            // 合言葉がなく、認証記録もない場合：元のサイトへ強制送還
+            window.top.location.href = RETURN_URL;
+        }
+    </script>
+    <script src="js/scenario_data.js"></script>
+</head>
+
+<body>
+    <div class="start-container">
+        <div class="title-group">
+            <h1 class="main-title">CCNA Simulator</h1>
+            <p class="subtitle">powered by Actias</p>
+        </div>
+
+        <div class="scenario-grid" id="scenario-list">
+            </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const listEl = document.getElementById('scenario-list');
+
+            if (typeof scenarios !== 'undefined') {
+                scenarios.filter(scene => scene.id !== 'free').forEach(scene => {
+                    // 変更: <a>タグではなく<div>タグでカードを作成
+                    const card = document.createElement('div');
+                    card.className = 'scenario-card';
+
+                    if (scene.image) {
+                        const img = document.createElement('img');
+                        img.src = scene.image;
+                        img.alt = scene.title;
+                        img.className = 'scenario-thumbnail';
+                        card.appendChild(img);
+                    }
+
+                    const title = document.createElement('h3');
+                    title.textContent = scene.title;
+                    card.appendChild(title);
+
+                    // 追加: ボタンをまとめるグループを作成
+                    const btnGroup = document.createElement('div');
+                    btnGroup.className = 'button-group';
+
+                    // 追加: 本番モードボタン
+                    const btnNormal = document.createElement('a');
+                    btnNormal.className = 'mode-btn btn-normal';
+                    btnNormal.href = `simulator.html?scenario=${scene.id}`;
+                    btnNormal.textContent = '本番モード';
+
+                    // 追加: 練習モードボタン（URLに &mode=practice を付与）
+                    const btnPractice = document.createElement('a');
+                    btnPractice.className = 'mode-btn btn-practice';
+                    btnPractice.href = `simulator.html?scenario=${scene.id}&mode=practice`;
+                    btnPractice.textContent = '練習モード';
+
+                    btnGroup.appendChild(btnNormal);
+                    btnGroup.appendChild(btnPractice);
+                    
+                    card.appendChild(btnGroup);
+                    listEl.appendChild(card);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

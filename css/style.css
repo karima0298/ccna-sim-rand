@@ -1,0 +1,361 @@
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background-color: #121212;
+    color: #e0e0e0;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+}
+
+body.app-mode {
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* 2-Pane Simulator Layout */
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* Left Pane: Info */
+.info-pane {
+    width: 50%;
+    min-width: 300px;
+    background-color: #fcfcfc;
+    /* White/Light bg per screenshot */
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #ccc;
+    position: relative;
+}
+
+.info-tabs {
+    display: flex;
+    background-color: #f1f1f1;
+    border-bottom: 1px solid #ccc;
+    height: 40px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #666;
+    border-right: 1px solid #e0e0e0;
+}
+
+.tab-btn.active {
+    background-color: #fff;
+    color: #333;
+    font-weight: bold;
+    border-bottom: 2px solid #fff;
+    /* Blend with content */
+    margin-bottom: -1px;
+}
+
+.info-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background-color: #fff;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.validation-log {
+    padding: 10px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #333;
+}
+
+.validation-log .status-msg {
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.validation-log ul {
+    margin: 10px 0;
+    padding-left: 20px;
+    list-style-type: disc;
+}
+
+.validation-log li {
+    margin-bottom: 8px;
+}
+
+.validation-log .ng-tag {
+    color: #ff5252;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.content-title {
+    font-size: 1.5rem;
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #444;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.scrollable-content {
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+/* Right Pane: Console */
+.console-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #fcfcfc;
+    /* Light background */
+    min-width: 300px;
+    position: relative;
+    /* For absolute positioning if needed, but flex is used */
+}
+
+.device-tabs-header {
+    height: 40px;
+    background-color: #f1f1f1;
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+    border-bottom: 1px solid #ccc;
+    flex-shrink: 0;
+}
+
+.device-tab-btn {
+    background: none;
+    border: none;
+    color: #666;
+    padding: 0 15px;
+    height: 100%;
+    cursor: pointer;
+    font-size: 0.9rem;
+    border-right: 1px solid #e0e0e0;
+}
+
+.device-tab-btn:hover {
+    color: #333;
+    background-color: #e9e9e9;
+}
+
+.device-tab-btn.active {
+    background-color: #fff;
+    color: #0076a3;
+    font-weight: bold;
+    border-top: 2px solid #0076a3;
+    border-bottom: 1px solid #fff;
+    margin-bottom: -1px;
+}
+
+.terminal-container {
+    flex: 1;
+    position: relative;
+    margin: 20px;
+    margin-bottom: 0;
+    /* Remove bottom margin to prevent overlap with action buttons */
+    border: 1px solid #ccc;
+    /* Define terminal window boundary */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    /* Subtle shadow for depth */
+    background-color: #000;
+    /* Ensure frame background is black behind iframe */
+    min-height: 0;
+    /* Allow flex shrinking */
+}
+
+.action-buttons-bottom-right {
+    padding: 15px 20px;
+    display: flex;
+    justify-content: flex-end;
+    /* Right align */
+    gap: 10px;
+    background-color: #fcfcfc;
+    /* Match pane bg */
+    border-top: 1px solid #eee;
+    /* Optional separator */
+    flex-shrink: 0;
+    /* Prevent buttons from being compressed or hidden */
+    z-index: 10;
+    /* Ensure buttons are above other elements */
+}
+
+#term-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
+
+/* Resizer */
+.resizer {
+    width: 5px;
+    background-color: #ccc;
+    cursor: col-resize;
+    z-index: 100;
+}
+
+.resizer:hover,
+.resizing .resizer {
+    background-color: #0076a3;
+}
+
+/* Topology Image */
+.topology-container {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.topology-container img {
+    max-width: 100%;
+    border: 1px solid #eee;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Buttons */
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+/* Validation Log in Tasks tab */
+.validation-log {
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    padding: 10px;
+    font-family: monospace;
+    margin-top: 15px;
+    color: #d9534f;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .app-container {
+        flex-direction: column;
+    }
+
+    .info-pane,
+    .console-pane {
+        width: 100%;
+        height: 50%;
+    }
+
+    .resizer {
+        height: 5px;
+        width: 100%;
+        cursor: row-resize;
+    }
+}
+
+/* --- Start Screen / Home Styles (Restored) --- */
+.start-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.start-title {
+    font-size: 2.5rem;
+    margin-bottom: 40px;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.scenario-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    justify-content: center;
+}
+
+.scenario-card {
+    background-color: #2d2d2d;
+    border-radius: 8px;
+    overflow: hidden;
+    text-decoration: none;
+    color: #e0e0e0;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #444;
+}
+
+.scenario-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    border-color: #0076a3;
+}
+
+.scenario-thumbnail {
+    width: 100%;
+    height: 180px;
+    object-fit: contain;
+    background-color: #000;
+}
+
+.scenario-card h3 {
+    padding: 20px;
+    margin: 0;
+    font-size: 1.2rem;
+    background-color: #333;
+    border-top: 1px solid #444;
+}
+
+/* Update for Title & Subtitle */
+.title-group {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.main-title {
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: #4da3ff;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin: 0;
+    text-shadow: 0 0 15px rgba(77, 163, 255, 0.3);
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.subtitle {
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-top: 5px;
+    font-weight: 300;
+    letter-spacing: 1px;
+    opacity: 0.8;
+}
+
+.start-title {
+    display: none;
+}
