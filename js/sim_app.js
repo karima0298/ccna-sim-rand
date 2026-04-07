@@ -937,7 +937,7 @@ function performValidation() {
     try {
         let ngMessages = [];
 
-        scenario.validations.forEach(val => {
+        appState.currentValidations.forEach(val => {
             const targetDevice = appState.devices[val.device];
             if (!targetDevice) {
                 ngMessages.push(`[Error] Device ${val.device} not found (Initialize failed?)`);
