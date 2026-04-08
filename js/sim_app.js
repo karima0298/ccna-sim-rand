@@ -99,14 +99,18 @@ const defaultRouterStateTemplate = {
 // アプリケーション状態管理
 const appState = {
     currentScenarioId: null,
-    currentDeviceName: null,
-    devices: {},
-    pendingAction: null,
-    examVars: null,         // 追加
-    currentTasks: null,     // 追加
-    currentValidations: null, // 追加
+    currentDeviceName: null, // 現在操作中のデバイス名
+    devices: {}, // { "SW1": stateObj, "R1": stateObj }
+    pendingStateSave: null, // 状態保存待ちの許容
+    examVars: null, // 試験モード用の動的変数保存先
     sshSourceDevice: null
 };
+
+// ▼ URLパラメータ取得ロジック ▼
+const urlParams = new URLSearchParams(window.location.search);
+let sceneId = urlParams.get('scenario');
+const isPracticeMode = urlParams.get('mode') === 'practice';
+const isExamMode = urlParams.get('mode') === 'exam';
 
 // iframeのロード待ち
 let engineReady = false;
@@ -450,107 +454,101 @@ function initScenario(scenarioId) {
 
     appState.currentScenarioId = scenarioId;
     appState.devices = {};
-    appState.examVars = null;
-    
-    // デフォルトのタスクと判定をセット
-    appState.currentTasks = scenario.tasks;
-    appState.currentValidations = scenario.validations;
+    appState.examVars = null; // ★変数クリア
 
-    // URLパラメータからモード判定
-    const isPracticeMode = new URLSearchParams(window.location.search).get('mode') === 'practice';
-    const isExamMode = new URLSearchParams(window.location.search).get('mode') === 'exam';
-
-    // 試験モード：ランダム変数の生成
+    // ★試験モードの場合、動的変数を生成・タスクと判定を上書き
     if (isExamMode && typeof scenario.generateVars === 'function') {
         appState.examVars = scenario.generateVars();
-        appState.currentTasks = scenario.getTasks(appState.examVars);
-        appState.currentValidations = scenario.getValidations(appState.examVars);
-    }
-
-    // ガイドライン・構成図の表示
-    document.getElementById('scenario-desc').innerHTML = scenario.description || scenario.desc || '';
-    const staticImg = document.getElementById('scenario-image');
-    const dynamicContainer = document.getElementById('topology-container');
-    
-    if (isExamMode && appState.examVars && dynamicContainer && scenarioId === 'new_q4_exam') {
-        staticImg.style.display = 'none';
-        dynamicContainer.style.display = 'inline-block';
-        document.getElementById('scenario-image-base').src = scenario.image;
-        document.getElementById('topo-q4-ipv4').textContent = appState.examVars.ipv4Subnet;
-        document.getElementById('topo-q4-ipv6').textContent = appState.examVars.ipv6Subnet;
-    } else {
-        if (dynamicContainer) dynamicContainer.style.display = 'none';
-        staticImg.src = scenario.image || '';
-        staticImg.style.display = scenario.image ? 'block' : 'none';
-    }
-
-    // タスク表示（既存のtasksHtmlを最優先で維持）
-    const tasksEl = document.getElementById('scenario-tasks');
-    if (tasksEl) {
-        if (scenario.tasksHtml) {
-            tasksEl.innerHTML = scenario.tasksHtml;
-        } else if (appState.currentTasks) {
-            let html = '<ol>';
-            appState.currentTasks.forEach((t, i) => {
-                html += `<li>${t}</li>`;
-                if (isPracticeMode) {
-                    let ans = (appState.examVars && scenario.getAnswers) ? 
-                              scenario.getAnswers(appState.examVars)[i] : (scenario.answers ? scenario.answers[i] : null);
-                    if (ans) html += `<div class="command-hint-box"><span class="command-hint-label">💡 解答コマンド</span><pre class="command-hint-code">${ans}</pre></div>`;
-                }
-            });
-            html += '</ol>';
-            tasksEl.innerHTML = html;
+        if (typeof scenario.getTasks === 'function') {
+            scenario.tasks = scenario.getTasks(appState.examVars);
+        }
+        if (typeof scenario.getValidations === 'function') {
+            scenario.validations = scenario.getValidations(appState.examVars);
         }
     }
 
-    // デバイスリスト構築（既存ロジック）
+    // デバイスリストUIの構築 (Right Pane Header)
     const deviceListEl = document.getElementById('device-list');
     deviceListEl.innerHTML = '';
-    scenario.devices.forEach((dev, index) => {
-        let state = deepCopy(dev.type === 'switch' ? defaultSwitchStateTemplate : defaultRouterStateTemplate);
-        state.hostname = dev.name;
-        state.runningConfig.hostname = dev.name;
-        appState.devices[dev.name] = { type: dev.type, state: state };
-        const btn = document.createElement('button');
-        btn.textContent = dev.name;
-        btn.className = 'device-tab-btn';
-        btn.onclick = () => limitSwitchDevice(dev.name);
-        if (index === 0) btn.classList.add('active');
-        deviceListEl.appendChild(btn);
-    });
-    if (scenario.devices.length > 0) {
-        appState.currentDeviceName = scenario.devices[0].name;
-        if (engineReady) loadDeviceToEngine(appState.currentDeviceName);
+
+    // 左ペインのコンテンツ更新 (Guidelines)
+    const descEl = document.getElementById('scenario-desc');
+    if (descEl) descEl.innerHTML = scenario.description || scenario.desc || '';
+
+    // ▼ ▼ トポロジ図の表示 (Topologyタブ) ▼ ▼
+    const staticImg = document.getElementById('scenario-image');
+    const dynamicContainer = document.getElementById('topology-container');
+    
+    // 試験モードかつ変数が生成されていれば、動的表示(重ね合わせ)を利用
+    if (isExamMode && appState.examVars && dynamicContainer) {
+        if (staticImg) staticImg.style.display = 'none';
+        dynamicContainer.style.display = 'inline-block';
+        
+        const baseImg = document.getElementById('scenario-image-base');
+        if (baseImg && scenario.image) baseImg.src = scenario.image;
+
+        // 問題ごとにOverlay用のIDに値をセット (例: Q4)
+        if (scenarioId === 'new_q4_exam') {
+            const ipv4El = document.getElementById('topo-q4-ipv4');
+            const ipv6El = document.getElementById('topo-q4-ipv6');
+            if (ipv4El) ipv4El.textContent = appState.examVars.ipv4Subnet;
+            if (ipv6El) ipv6El.textContent = appState.examVars.ipv6Subnet;
+        }
+    } else {
+        // 通常の静的表示
+        if (dynamicContainer) dynamicContainer.style.display = 'none';
+        if (staticImg) {
+            if (scenario.image) {
+                staticImg.src = scenario.image;
+                staticImg.style.display = 'block';
+            } else {
+                staticImg.style.display = 'none';
+                staticImg.src = '';
+            }
+        }
     }
-}
 
     // 判定ログクリア (Validationタブ内)
     const logEl = document.getElementById('validation-log');
     if (logEl) {
         logEl.textContent = '';
-        logEl.style.color = '#333'; // Reset color
+        logEl.style.color = '#333';
     }
 
     // ▼ ▼ タスク表示 (Tasksタブ) - 練習モード対応 ▼ ▼
     const tasksEl = document.getElementById('scenario-tasks');
     if (tasksEl) {
         let tasksHtml = '';
-        if (scenario.tasksHtml) {
+        // ★既存問題 (tasksHtmlが直接記述されている場合) を優先
+        if (scenario.tasksHtml && !isExamMode) {
             tasksHtml = scenario.tasksHtml;
-        } else if (scenario.tasks && Array.isArray(scenario.tasks) && scenario.tasks.length > 0) {
+        } 
+        // 配列形式のタスクの場合
+        else if (scenario.tasks && Array.isArray(scenario.tasks) && scenario.tasks.length > 0) {
             tasksHtml = '<ol>';
             scenario.tasks.forEach((t, index) => {
                 tasksHtml += `<li>${t}</li>`;
                 
-                // 練習モード（isPracticeMode）かつ、該当する解答が設定されている場合にコマンドを表示
-                if (isPracticeMode && scenario.answers && scenario.answers[index]) {
-                    tasksHtml += `
-                        <div class="command-hint-box">
-                            <span class="command-hint-label">💡 解答コマンド</span>
-                            <pre class="command-hint-code">${scenario.answers[index]}</pre>
-                        </div>
-                    `;
+                // 練習モード判定：解答コマンドを表示
+                if (isPracticeMode) {
+                    let answer = null;
+                    if (appState.examVars && typeof scenario.getAnswers === 'function') {
+                        // 試験モードかつ練習モードの場合 (動的解答)
+                        const dynamicAnswers = scenario.getAnswers(appState.examVars);
+                        answer = dynamicAnswers[index];
+                    } else if (scenario.answers && scenario.answers[index]) {
+                        // 通常の練習モード (静的解答)
+                        answer = scenario.answers[index];
+                    }
+                    
+                    if (answer) {
+                        tasksHtml += `
+                            <div class="command-hint-box">
+                                <span class="command-hint-label">💡 解答コマンド</span>
+                                <pre class="command-hint-code">${answer}</pre>
+                            </div>
+                        `;
+                    }
                 }
             });
             tasksHtml += '</ol>';
@@ -559,7 +557,6 @@ function initScenario(scenarioId) {
         }
         tasksEl.innerHTML = tasksHtml;
     }
-    // ▲ ▲ ここまで ▲ ▲
 
     // タブの初期化 (ワンタイム)
     initTabs();
@@ -711,8 +708,6 @@ function limitSwitchDevice(nextDeviceName, isSsh = false) {
 
 // エンジンに状態を要求 (保存のため)
 function requestStateFromEngine() {
-    // postMessage 'GET_STATE'
-    // iframeにメッセージを送る
     const frameWindow = termFrame.contentWindow;
     if (frameWindow) {
         frameWindow.postMessage({ type: 'GET_STATE' }, '*');
@@ -731,20 +726,17 @@ function loadDeviceToEngine(deviceName, isSsh = false) {
     resolveScenarioDependencies(appState.currentScenarioId);
 
     if (frameWindow) {
-        // 現在のシナリオのトポロジーを取得
         const scenario = scenarios.find(s => s.id === appState.currentScenarioId);
         const topology = scenario ? scenario.topology : null;
 
-        // メッセージ送信: LOAD_STATE
         frameWindow.postMessage({
             type: 'LOAD_STATE',
             payload: target.state,
             deviceType: target.type,
-            topology: topology, // トポロジー情報を追加
+            topology: topology,
             isSsh: isSsh
         }, '*');
 
-        // フォーカスも要求
         setTimeout(() => {
             frameWindow.postMessage({ type: 'FOCUS' }, '*');
         }, 100);
@@ -761,21 +753,15 @@ function loadDeviceToEngine(deviceName, isSsh = false) {
         resizer.addEventListener('mousedown', (e) => {
             isResizing = true;
             document.body.classList.add('resizing');
-            // ドラッグ中のマウスイベントを確実にキャッチするため
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', stopResizing);
         });
 
         function handleMouseMove(e) {
             if (!isResizing) return;
-
-            // マウス位置から左ペインの幅を計算
             let newWidth = e.clientX;
-
-            // 境界値のチェック
             if (newWidth < 300) newWidth = 300;
             if (newWidth > window.innerWidth - 300) newWidth = window.innerWidth - 300;
-
             leftPane.style.width = newWidth + 'px';
         }
 
@@ -803,19 +789,15 @@ function updateDeviceListUI(activeName) {
 function resolveScenarioDependencies(scenarioId) {
     if (scenarioId !== 'prob3') return;
 
-    // Problem 3 Specific Logic
     const sw1 = appState.devices['SW-1'];
     const r3 = appState.devices['R3'];
     const r2 = appState.devices['R2'];
 
     if (sw1 && sw1.state && r3 && r3.state) {
-        // --- DHCP Relay Check ---
         const interfaces = sw1.state.runningConfig.interfaces || {};
         const vlan101 = interfaces['Vlan101'];
-        // console.log('Checking Vlan101 for DHCP Relay:', vlan101); // Debug log
 
         if (vlan101 && vlan101.ipHelper === '10.0.12.2') {
-            // Assign IP to R3
             if (!r3.state.runningConfig.interfaces['Ethernet0/0']) {
                 r3.state.runningConfig.interfaces['Ethernet0/0'] = {};
             }
@@ -823,7 +805,6 @@ function resolveScenarioDependencies(scenarioId) {
             r3.state.runningConfig.interfaces['Ethernet0/0'].mask = '255.255.255.0';
             r3.state.runningConfig.interfaces['Ethernet0/0'].method = 'DHCP';
         } else {
-            // Remove IP from R3
             if (r3.state.runningConfig.interfaces['Ethernet0/0']) {
                 r3.state.runningConfig.interfaces['Ethernet0/0'].ip = null;
                 r3.state.runningConfig.interfaces['Ethernet0/0'].mask = null;
@@ -833,12 +814,6 @@ function resolveScenarioDependencies(scenarioId) {
     }
 
     if (sw1 && sw1.state && r2 && r2.state) {
-        // --- SSH Check (Pre-calculation for Simulation Flags if needed) ---
-        // Actually, SSH_CHECK is done dynamically via postMessage 'SSH_CHECK', 
-        // so we don't strictly need to update R2 state here unless we want to cache it.
-        // The requirements said: "R2の simulationFlags.sshTarget['10.0.12.1'] を true に..."
-        // If we follow the requiremet strictly to update R2 flags:
-
         const security = sw1.state.runningConfig.security;
         const lines = sw1.state.runningConfig.lines;
 
@@ -866,29 +841,21 @@ function resolveScenarioDependencies(scenarioId) {
 // 判定処理開始
 function validateScenario() {
     console.log('validateScenario called');
-
-    // まずタブを切り替える
     switchToTab('validation');
 
     const logEl = document.getElementById('validation-log');
-    if (!logEl) {
-        console.error('validation-log element not found');
-        alert('Internal Error: Validation log element missing.');
-        return;
-    }
+    if (!logEl) return;
 
     logEl.textContent = "データを取得中... (Engine State Request)\n";
     logEl.style.color = '#666';
 
     const scenario = scenarios.find(s => s.id === appState.currentScenarioId);
     if (!scenario) {
-        console.error('Scenario not found for validation');
         logEl.textContent = `[Error] Scenario ID '${appState.currentScenarioId}' not found.\n`;
         logEl.style.color = 'red';
         return;
     }
 
-    // タイムアウト設定 (エンジンからの応答がない場合でも判定を強制実行)
     const timeoutId = setTimeout(() => {
         if (appState.pendingAction && appState.pendingAction.type === 'VALIDATE') {
             logEl.textContent += "[Warning] エンジンからの応答が遅いため、現在の保存済みデータで判定を行います。\n";
@@ -897,13 +864,11 @@ function validateScenario() {
         }
     }, 2000);
 
-    // 現在の状態を保存してから判定ロジックを走らせる
     try {
         requestStateFromEngine();
         appState.pendingAction = { type: 'VALIDATE', timeoutId: timeoutId };
     } catch (e) {
         logEl.textContent += `[Error] データ要求に失敗: ${e.message}\n`;
-        // 直ちに判定試行
         performValidation();
     }
 }
@@ -912,22 +877,15 @@ function validateScenario() {
 function performValidation() {
     console.log('performValidation started');
     const scenario = scenarios.find(s => s.id === appState.currentScenarioId);
-    if (!scenario) {
-        console.error('Scenario not found for validation');
-        return;
-    }
+    if (!scenario) return;
 
-    // Validationタブへ切り替え
     switchToTab('validation');
 
     const logEl = document.getElementById('validation-log');
-    if (logEl) {
-        logEl.innerHTML = '<div class="status-msg">判定を開始します...</div>';
-        logEl.style.color = '#333';
-    } else {
-        console.error('validation-log element not found');
-        return;
-    }
+    if (!logEl) return;
+    
+    logEl.innerHTML = '<div class="status-msg">判定を開始します...</div>';
+    logEl.style.color = '#333';
 
     if (!scenario.validations) {
         logEl.innerHTML = '<div class="status-msg">このシナリオには判定設定がありません。</div>';
@@ -937,14 +895,13 @@ function performValidation() {
     try {
         let ngMessages = [];
 
-        appState.currentValidations.forEach(val => {
+        scenario.validations.forEach(val => {
             const targetDevice = appState.devices[val.device];
             if (!targetDevice) {
                 ngMessages.push(`[Error] Device ${val.device} not found (Initialize failed?)`);
                 return;
             }
 
-            // パス解決 (ex: "runningConfig.vlans.10.name")
             let actualValue;
             try {
                 actualValue = resolvePath(targetDevice.state, val.path);
@@ -954,26 +911,21 @@ function performValidation() {
                 return;
             }
 
-            // カスタム条件判定関数がある場合
             if (typeof val.condition === 'function') {
                 if (!val.condition(actualValue)) {
                     ngMessages.push(`<span class="ng-tag">[NG]</span> ${val.message} (Value: ${actualValue})`);
                 }
             }
-            // 部分一致判定 (配列内のオブジェクト等)
             else if (val.match === 'contains') {
                 const isMatch = Array.isArray(actualValue) && actualValue.some(item => {
-                    // expectedがオブジェクトの場合、その全てのキーが一致するか判定
                     return Object.keys(val.expected).every(key => {
                         return item && String(item[key]) === String(val.expected[key]);
                     });
                 });
-
                 if (!isMatch) {
                     ngMessages.push(`<span class="ng-tag">[NG]</span> ${val.message}`);
                 }
             }
-            // 単純比較の場合
             else if (val.hasOwnProperty('expected')) {
                 if (!compareValues(actualValue, val.expected)) {
                     const displayActual = Array.isArray(actualValue) ? `[${actualValue.join(',')}]` : actualValue;
@@ -1021,28 +973,18 @@ document.getElementById('home-btn').addEventListener('click', () => {
     window.location.href = 'index.html';
 });
 
-// ▼ ここから追加・変更：練習モードフラグの取得 ▼
-// 初期化実行 (URLパラメータからシナリオID取得)
-const urlParams = new URLSearchParams(window.location.search);
-let sceneId = urlParams.get('scenario');
-const isPracticeMode = urlParams.get('mode') === 'practice'; // URLから練習モードかを判定
-
-// フォールバック: シナリオ指定がない場合は question1 をデフォルトとする
+// 初期化実行 
 if (!sceneId) {
     console.warn('No scenario ID provided in URL. Defaulting to question1.');
-    sceneId = 'question1'; // ★ここを変更
+    sceneId = 'question1'; 
 }
 
 if (sceneId) {
-    // データ定義読み込み待ち
     if (typeof scenarios !== 'undefined') {
         initScenario(sceneId);
-        initTabs(); // タブの初期化を呼び出す
     } else {
         setTimeout(() => {
             initScenario(sceneId);
-            initTabs(); // タブの初期化を呼び出す
         }, 100);
     }
-
 }
