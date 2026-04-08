@@ -7,36 +7,72 @@
     <link rel="stylesheet" href="css/style.css">
     
     <style>
-        .button-group { display: flex; gap: 10px; margin-top: 15px; }
-        .mode-btn { flex: 1; text-align: center; padding: 10px 5px; border-radius: 4px; text-decoration: none; font-size: 14px; font-weight: bold; transition: opacity 0.2s; }
-        .mode-btn:hover { opacity: 0.8; }
-        .btn-normal { background-color: #0066cc; color: white; border: 1px solid #0055aa; }
-        .btn-practice { background-color: #4CAF50; color: white; border: 1px solid #45a049; }
-        .btn-exam { background-color: #f44336; color: white; border: 1px solid #d32f2f; }
-        .scenario-card { display: flex; flex-direction: column; cursor: default; }
+        /* カード内のボタン用スタイル */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .mode-btn {
+            flex: 1;
+            text-align: center;
+            padding: 10px 5px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .btn-normal {
+            background-color: #0066cc;
+            color: white;
+            border: 1px solid #0055aa;
+        }
+        .btn-normal:hover {
+            background-color: #0055aa;
+        }
+        .btn-practice {
+            background-color: #4CAF50;
+            color: white;
+            border: 1px solid #45a049;
+        }
+        .btn-practice:hover {
+            background-color: #45a049;
+        }
+        .btn-exam {
+            background-color: #f44336;
+            color: white;
+            border: 1px solid #d32f2f;
+        }
+        .btn-exam:hover {
+            background-color: #d32f2f;
+        }
+        /* カード自体がリンクだった場合の名残を消すための調整 */
+        .scenario-card {
+            display: flex;
+            flex-direction: column;
+            cursor: default;
+        }
     </style>
 
     <script>
-        // =================================================================
-        // 【動作検証用】一時的に外部認証（合言葉チェックと強制送還）を無効化しています
-        // 本番環境に戻す際は、下の /* と */ を削除してください。
-        // =================================================================
+        const SECRET_KEY = "actias22"; 
+        const RETURN_URL = "https://script.google.com/macros/s/AKfycbwuT4rJ6aV2Gi-cOVayvDuvMSuu69w35fb6u7XfXsVJ/dev"; 
         
-        /*
-        const SECRET_KEY = "actias22";
-        const RETURN_URL = "https://script.google.com/macros/s/AKfycbwuT4rJ6aV2Gi-cOVayvDuvMSuu69w35fb6u7XfXsVJ/dev";
         const currentUrlParams = new URLSearchParams(window.location.search);
         const providedKey = currentUrlParams.get('key');
-        
+
+        /* ▼ 動作検証のため一時的にコメントアウト (JavaScriptの正しいコメント記述) ▼
         if (providedKey === SECRET_KEY) {
             sessionStorage.setItem('isSimulatorAuth', 'true');
             currentUrlParams.delete('key');
             const newUrl = window.location.pathname + (currentUrlParams.toString() ? '?' + currentUrlParams.toString() : '');
             window.history.replaceState(null, null, newUrl);
+            
         } else if (sessionStorage.getItem('isSimulatorAuth') !== 'true') {
             window.top.location.href = RETURN_URL;
         }
-        */
+        ▲ ここまで ▲ */
     </script>
     <script src="js/scenario_data.js"></script>
 </head>
@@ -49,7 +85,7 @@
         </div>
 
         <div class="scenario-grid" id="scenario-list">
-        </div>
+            </div>
     </div>
 
     <script>
@@ -76,8 +112,8 @@
                     const btnGroup = document.createElement('div');
                     btnGroup.className = 'button-group';
 
+                    // 試験モード用問題（generateVarsが存在する）かどうかの判定
                     if (scene.generateVars && typeof scene.generateVars === 'function') {
-                        // 試験モード専用問題の場合
                         const examTag = document.createElement('p');
                         examTag.style = 'color: red; font-weight: bold; font-size: 12px; margin: 5px 0 0 0; text-align: center;';
                         examTag.textContent = '※アドレス/サブネットが毎回変動';
@@ -96,7 +132,6 @@
                         btnGroup.appendChild(btnExam);
                         btnGroup.appendChild(btnPractice);
                     } else {
-                        // 通常問題の場合
                         const btnNormal = document.createElement('a');
                         btnNormal.className = 'mode-btn btn-normal';
                         btnNormal.href = `simulator.html?scenario=${scene.id}`;
