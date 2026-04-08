@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="css/style.css">
     
     <style>
-        /* カード内のボタン用スタイル */
         .button-group {
             display: flex;
             gap: 10px;
@@ -47,7 +46,6 @@
         .btn-exam:hover {
             background-color: #d32f2f;
         }
-        /* カード自体がリンクだった場合の名残を消すための調整 */
         .scenario-card {
             display: flex;
             flex-direction: column;
@@ -62,7 +60,7 @@
         const currentUrlParams = new URLSearchParams(window.location.search);
         const providedKey = currentUrlParams.get('key');
 
-        /* ▼ 動作検証のため一時的にコメントアウト (JavaScriptの正しいコメント記述) ▼
+        /* 動作検証のため一時的にコメントアウトしています
         if (providedKey === SECRET_KEY) {
             sessionStorage.setItem('isSimulatorAuth', 'true');
             currentUrlParams.delete('key');
@@ -72,7 +70,7 @@
         } else if (sessionStorage.getItem('isSimulatorAuth') !== 'true') {
             window.top.location.href = RETURN_URL;
         }
-        ▲ ここまで ▲ */
+        */
     </script>
     <script src="js/scenario_data.js"></script>
 </head>
@@ -85,7 +83,7 @@
         </div>
 
         <div class="scenario-grid" id="scenario-list">
-            </div>
+        </div>
     </div>
 
     <script>
@@ -112,8 +110,8 @@
                     const btnGroup = document.createElement('div');
                     btnGroup.className = 'button-group';
 
-                    // 試験モード用問題（generateVarsが存在する）かどうかの判定
                     if (scene.generateVars && typeof scene.generateVars === 'function') {
+                        // 試験モード専用問題の場合（練習モードボタンを除外）
                         const examTag = document.createElement('p');
                         examTag.style = 'color: red; font-weight: bold; font-size: 12px; margin: 5px 0 0 0; text-align: center;';
                         examTag.textContent = '※アドレス/サブネットが毎回変動';
@@ -124,14 +122,9 @@
                         btnExam.href = `simulator.html?scenario=${scene.id}&mode=exam`;
                         btnExam.textContent = '試験モード';
 
-                        const btnPractice = document.createElement('a');
-                        btnPractice.className = 'mode-btn btn-practice';
-                        btnPractice.href = `simulator.html?scenario=${scene.id}&mode=practice`;
-                        btnPractice.textContent = '練習モード';
-
                         btnGroup.appendChild(btnExam);
-                        btnGroup.appendChild(btnPractice);
                     } else {
+                        // 通常問題の場合（本番モードと練習モードの両方を表示）
                         const btnNormal = document.createElement('a');
                         btnNormal.className = 'mode-btn btn-normal';
                         btnNormal.href = `simulator.html?scenario=${scene.id}`;
