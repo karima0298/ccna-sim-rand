@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="css/style.css">
 
     <style>
+        /* 練習モード用スタイル */
         .command-hint-box {
             background-color: #1a1a1a;
             border: 1px solid #333;
@@ -35,24 +36,9 @@
         #scenario-tasks ol li {
             margin-bottom: 15px;
             line-height: 1.5;
-            <style>
-        /* 練習モードの解答表示用スタイル */
-        .command-hint-box {
-            background-color: #1a1a1a;
-            border: 1px solid #333;
-            border-left: 4px solid #4CAF50;
-            border-radius: 4px;
-            padding: 10px;
-            margin-top: 10px;
-            margin-bottom: 25px;
-    }
-    .command-hint-label { color: #4CAF50; font-size: 12px; font-weight: bold; margin-bottom: 5px; display: block; }
-    .command-hint-code { color: #33ff33; font-family: 'Courier New', monospace; font-size: 13px; white-space: pre-wrap; margin: 0; line-height: 1.4; }
-    #scenario-tasks ol li { margin-bottom: 15px; line-height: 1.5; }
-</style>
         }
     </style>
-    </head>
+</head>
 
 <body class="app-mode">
     <div class="app-container">
@@ -68,24 +54,24 @@
                 <div id="guidelines" class="tab-content active">
                     <h2 class="content-title">Guidelines</h2>
                     <div id="scenario-desc" class="scrollable-content">
-                        </div>
+                    </div>
                 </div>
                 <div id="topology" class="tab-content">
                     <h2 class="content-title">Topology</h2>
-                    <div class="topology-area" style="text-align: center; padding: 20px;">
-                        <img id="scenario-image" src="" alt="Topology" style="max-width: 100%; height: auto; display: none;">
-        
+                    <div class="topology-container" style="text-align: center;">
+                        <img id="scenario-image" src="" alt="Topology" style="display:none; max-width: 100%; height: auto;">
+                        
                         <div id="topology-container" style="position: relative; display: inline-block; display: none;">
                             <img id="scenario-image-base" src="" alt="Topology Base" style="max-width: 100%; height: auto;">
-                            <span id="topo-q4-ipv4" style="position: absolute; top: 41.5%; left: 63.5%; color: red; font-size: 13px; font-weight: bold; transform: rotate(-10deg);"></span>
-                            <span id="topo-q4-ipv6" style="position: absolute; top: 49.5%; left: 63.5%; color: purple; font-size: 13px; font-weight: bold; transform: rotate(-10deg);"></span>
+                            <span id="topo-q4-ipv4" style="position: absolute; top: 41.5%; left: 63.5%; color: red; font-size: 13.5px; font-weight: bold; transform: rotate(-10deg);"></span>
+                            <span id="topo-q4-ipv6" style="position: absolute; top: 49.5%; left: 63.5%; color: purple; font-size: 13.5px; font-weight: bold; transform: rotate(-10deg);"></span>
+                        </div>
                     </div>
                 </div>
-            </div>
                 <div id="tasks" class="tab-content">
                     <h2 class="content-title">Tasks</h2>
                     <div id="scenario-tasks" class="scrollable-content">
-                        </div>
+                    </div>
                 </div>
                 <div id="validation" class="tab-content">
                     <h2 class="content-title">Results</h2>
@@ -100,7 +86,7 @@
 
         <div class="console-pane">
             <div class="device-tabs-header" id="device-list">
-                </div>
+            </div>
 
             <div class="terminal-container">
                 <iframe src="engine.html" id="term-frame" title="Terminal Engine"></iframe>
