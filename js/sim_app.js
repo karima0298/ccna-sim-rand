@@ -103,6 +103,8 @@ const appState = {
     devices: {}, // { "SW1": stateObj, "R1": stateObj }
     pendingStateSave: null, // 状態保存待ちの許容
     examVars: null, // 試験モード用の動的変数保存先
+    currentTasks: null,
+    currentValidations: null,
     sshSourceDevice: null
 };
 
@@ -454,33 +456,35 @@ function initScenario(scenarioId) {
 
     appState.currentScenarioId = scenarioId;
     appState.devices = {};
-    appState.examVars = null; // ★変数クリア
+    appState.examVars = null;
+    
+    // デフォルトのタスクと判定をセット
+    appState.currentTasks = scenario.tasks;
+    appState.currentValidations = scenario.validations;
 
-    // ★試験モードの場合、動的変数を生成・タスクと判定を上書き
-    if (isExamMode && typeof scenario.generateVars === 'function') {
+    // --- ★修正箇所★ ランダム変数の生成は、試験モードかどうかに関わらず、
+    // 問題データにgenerateVars関数が存在すれば常に実行する！
+    const hasDynamicVars = typeof scenario.generateVars === 'function';
+
+    if (hasDynamicVars) {
         appState.examVars = scenario.generateVars();
         if (typeof scenario.getTasks === 'function') {
-            scenario.tasks = scenario.getTasks(appState.examVars);
+            appState.currentTasks = scenario.getTasks(appState.examVars);
         }
         if (typeof scenario.getValidations === 'function') {
-            scenario.validations = scenario.getValidations(appState.examVars);
+            appState.currentValidations = scenario.getValidations(appState.examVars);
         }
     }
 
-    // デバイスリストUIの構築 (Right Pane Header)
-    const deviceListEl = document.getElementById('device-list');
-    deviceListEl.innerHTML = '';
+    // ガイドライン（説明文）表示
+    document.getElementById('scenario-desc').innerHTML = scenario.description || scenario.desc || '';
 
-    // 左ペインのコンテンツ更新 (Guidelines)
-    const descEl = document.getElementById('scenario-desc');
-    if (descEl) descEl.innerHTML = scenario.description || scenario.desc || '';
-
-    // ▼ ▼ トポロジ図の表示 (Topologyタブ) ▼ ▼
+    // --- 構成図の表示ロジック ---
     const staticImg = document.getElementById('scenario-image');
     const dynamicContainer = document.getElementById('topology-container');
     
-    // 試験モードかつ変数が生成されていれば、動的表示(重ね合わせ)を利用
-    if (isExamMode && appState.examVars && dynamicContainer) {
+    // ★修正箇所★: 試験モードかどうかに関わらず、変数が生成されていれば重ね合わせ表示を行う
+    if (hasDynamicVars && appState.examVars && dynamicContainer) {
         if (staticImg) staticImg.style.display = 'none';
         dynamicContainer.style.display = 'inline-block';
         
@@ -519,25 +523,25 @@ function initScenario(scenarioId) {
     const tasksEl = document.getElementById('scenario-tasks');
     if (tasksEl) {
         let tasksHtml = '';
-        // ★既存問題 (tasksHtmlが直接記述されている場合) を優先
-        if (scenario.tasksHtml && !isExamMode) {
+        // 既存問題 (tasksHtmlが直接記述されている場合) を優先
+        if (scenario.tasksHtml && !appState.examVars) {
             tasksHtml = scenario.tasksHtml;
         } 
-        // 配列形式のタスクの場合
-        else if (scenario.tasks && Array.isArray(scenario.tasks) && scenario.tasks.length > 0) {
+        // 配列形式のタスクの場合 (ランダム生成された tasks もここを通る)
+        else if (appState.currentTasks && Array.isArray(appState.currentTasks) && appState.currentTasks.length > 0) {
             tasksHtml = '<ol>';
-            scenario.tasks.forEach((t, index) => {
+            appState.currentTasks.forEach((t, index) => {
                 tasksHtml += `<li>${t}</li>`;
                 
                 // 練習モード判定：解答コマンドを表示
                 if (isPracticeMode) {
                     let answer = null;
-                    if (appState.examVars && typeof scenario.getAnswers === 'function') {
-                        // 試験モードかつ練習モードの場合 (動的解答)
+                    if (hasDynamicVars && appState.examVars && typeof scenario.getAnswers === 'function') {
+                        // ランダム問題の練習モード (動的解答)
                         const dynamicAnswers = scenario.getAnswers(appState.examVars);
                         answer = dynamicAnswers[index];
                     } else if (scenario.answers && scenario.answers[index]) {
-                        // 通常の練習モード (静的解答)
+                        // 通常問題の練習モード (静的解答)
                         answer = scenario.answers[index];
                     }
                     
@@ -887,7 +891,10 @@ function performValidation() {
     logEl.innerHTML = '<div class="status-msg">判定を開始します...</div>';
     logEl.style.color = '#333';
 
-    if (!scenario.validations) {
+    // ランダム問題の場合は動的バリデーションを使用
+    const activeValidations = appState.currentValidations || scenario.validations;
+
+    if (!activeValidations) {
         logEl.innerHTML = '<div class="status-msg">このシナリオには判定設定がありません。</div>';
         return;
     }
@@ -895,7 +902,7 @@ function performValidation() {
     try {
         let ngMessages = [];
 
-        scenario.validations.forEach(val => {
+        activeValidations.forEach(val => {
             const targetDevice = appState.devices[val.device];
             if (!targetDevice) {
                 ngMessages.push(`[Error] Device ${val.device} not found (Initialize failed?)`);
