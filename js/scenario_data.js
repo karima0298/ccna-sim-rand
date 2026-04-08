@@ -574,7 +574,7 @@ SW-2(config-if)# channel-group 12 mode passive`
     ]
   }, // <=== ★【重要】このカンマが抜けていました！
 
-  // =========================================================================================
+ // =========================================================================================
   // 【試験モード用】ランダム化シナリオ
   // =========================================================================================
 
@@ -591,17 +591,49 @@ SW-2(config-if)# channel-group 12 mode passive`
         <p>指定されたサブネットを使用して、R1およびR2のインターフェースに適切なIPアドレスを設定してください。</p>
       </div>
     `,
-    // 開いた瞬間にランダムなIPアドレス変数を生成するロジック
+    // 開いた瞬間にサブネットとIPアドレスを動的に計算・生成するロジック
     generateVars: () => {
-      const fourthOctet = Math.floor(Math.random() * 60) * 4 + 4; 
-      const hexDigit = Math.floor(Math.random() * 16).toString(16);
+      // --- IPv4 ランダム生成 (/25 〜 /30) ---
+      const ipv4Prefix = Math.floor(Math.random() * 6) + 25; // 25, 26, 27, 28, 29, 30
+      const hostBits4 = 32 - ipv4Prefix;
+      const blockSize4 = Math.pow(2, hostBits4);
+      const numBlocks4 = 256 / blockSize4;
+      const blockIndex4 = Math.floor(Math.random() * (numBlocks4 - 2)) + 1; // 0番目と255番目のネットワークを避ける
+      const netOffset4 = blockIndex4 * blockSize4;
+      const firstHost4 = netOffset4 + 1;
+      const lastHost4 = netOffset4 + blockSize4 - 2;
+
+      const ipv4Subnet = `10.0.12.${netOffset4}/${ipv4Prefix}`;
+      const r1Ipv4 = `10.0.12.${firstHost4}`;
+      const r2Ipv4 = `10.0.12.${lastHost4}`;
+
+      // プレフィックス長からサブネットマスクを導出
+      const maskMap = {
+          25: "255.255.255.128", 26: "255.255.255.192", 27: "255.255.255.224",
+          28: "255.255.255.240", 29: "255.255.255.248", 30: "255.255.255.252"
+      };
+      const rIpv4Mask = maskMap[ipv4Prefix];
+
+      // --- IPv6 ランダム生成 (/122 〜 /126) ---
+      const ipv6Prefix = Math.floor(Math.random() * 5) + 122; // 122, 123, 124, 125, 126
+      const hostBits6 = 128 - ipv6Prefix;
+      const blockSize6 = Math.pow(2, hostBits6);
+      const hexBlock = Math.floor(Math.random() * 65535).toString(16); // 16進数でランダムなブロック(0〜ffff)
+      const netOffset6 = Math.floor(Math.random() * 16) * blockSize6; // ネットワークアドレスのオフセット
+      
+      const firstHost6Hex = (netOffset6 + 1).toString(16);
+      const lastHost6Hex = (netOffset6 + blockSize6 - 1).toString(16);
+      
+      const netStr = netOffset6 === 0 ? "" : netOffset6.toString(16);
+      const ipv6Subnet = `2001:db8:12:${hexBlock}::${netStr}/${ipv6Prefix}`;
+      const r1Ipv6 = `2001:db8:12:${hexBlock}::${firstHost6Hex}/${ipv6Prefix}`;
+      const r2Ipv6 = `2001:db8:12:${hexBlock}::${lastHost6Hex}/${ipv6Prefix}`;
+
       return {
-        ipv4Subnet: `10.0.12.${fourthOctet}/30`,
-        r1Ipv4: `10.0.12.${fourthOctet + 1}`,
-        r2Ipv4: `10.0.12.${fourthOctet + 2}`,
-        ipv6Subnet: `2001:db8:12:${hexDigit}::/126`,
-        r1Ipv6: `2001:db8:12:${hexDigit}::1/126`,
-        r2Ipv6: `2001:db8:12:${hexDigit}::3/126`
+        ipv4Prefix, hostBits4, blockSize4, netOffset4, firstHost4, lastHost4,
+        ipv4Subnet, r1Ipv4, r2Ipv4, rIpv4Mask,
+        ipv6Prefix, hostBits6, blockSize6, netOffset6, hexBlock, firstHost6Hex, lastHost6Hex,
+        ipv6Subnet, r1Ipv6, r2Ipv6
       };
     },
     // 生成した変数をタスク文に埋め込む
@@ -612,8 +644,9 @@ SW-2(config-if)# channel-group 12 mode passive`
     // 生成した変数を正解の判定（検証）ルールに埋め込む
     getValidations: (vars) => [
       { device: "R1", path: "runningConfig.interfaces.Ethernet0/0.ip", expected: vars.r1Ipv4, message: `R1: IPv4アドレスが ${vars.r1Ipv4} に設定されていません` },
-      { device: "R1", path: "runningConfig.interfaces.Ethernet0/0.mask", expected: "255.255.255.252", message: "R1: IPv4サブネットマスクが 255.255.255.252 ではありません" },
+      { device: "R1", path: "runningConfig.interfaces.Ethernet0/0.mask", expected: vars.rIpv4Mask, message: `R1: IPv4サブネットマスクが ${vars.rIpv4Mask} ではありません` },
       { device: "R2", path: "runningConfig.interfaces.Ethernet0/0.ip", expected: vars.r2Ipv4, message: `R2: IPv4アドレスが ${vars.r2Ipv4} に設定されていません` },
+      { device: "R2", path: "runningConfig.interfaces.Ethernet0/0.mask", expected: vars.rIpv4Mask, message: `R2: IPv4サブネットマスクが ${vars.rIpv4Mask} ではありません` },
       { device: "R1", path: "runningConfig.interfaces.Ethernet0/0.ipv6", expected: vars.r1Ipv6, message: `R1: IPv6アドレスが ${vars.r1Ipv6} に設定されていません` },
       { device: "R2", path: "runningConfig.interfaces.Ethernet0/0.ipv6", expected: vars.r2Ipv6, message: `R2: IPv6アドレスが ${vars.r2Ipv6} に設定されていません` },
       { device: "R1", path: "runningConfig.interfaces.Ethernet0/0.status", expected: "up", message: "R1: インターフェースが起動していません (no shut)" },
@@ -621,15 +654,21 @@ SW-2(config-if)# channel-group 12 mode passive`
       { device: "R1", path: "runningConfig.startupConfig", condition: (val) => val != null, message: "R1: 設定が保存されていません (copy run start を実行してください)" },
       { device: "R2", path: "runningConfig.startupConfig", condition: (val) => val != null, message: "R2: 設定が保存されていません (copy run start を実行してください)" }
     ],
-    // 練習モード用に解答コマンドを生成
+    // 練習モード用に解答コマンドと動的解説を生成
     getAnswers: (vars) => [
 `R1(config)#interface e0/0
-R1(config-if)#ip address ${vars.r1Ipv4} 255.255.255.252
+R1(config-if)#ip address ${vars.r1Ipv4} ${vars.rIpv4Mask}
 R1(config-if)#no shut
 
 R2(config)#interface e0/0
-R2(config-if)#ip address ${vars.r2Ipv4} 255.255.255.252
-R2(config-if)#no shut`,
+R2(config-if)#ip address ${vars.r2Ipv4} ${vars.rIpv4Mask}
+R2(config-if)#no shut
+
+【解説】IPv4 (${vars.ipv4Subnet}) の計算:
+プレフィックス長 /${vars.ipv4Prefix} は、ホスト部が ${vars.hostBits4} ビットです。
+ブロックサイズ（IPの塊）は 2の${vars.hostBits4}乗 = ${vars.blockSize4} 個となります。
+サブネットマスクは ${vars.rIpv4Mask} です。
+ネットワークアドレス .${vars.netOffset4} の次が最初のアドレス（.${vars.firstHost4}）、ブロードキャストアドレスの1つ前が最後のアドレス（.${vars.lastHost4}）となります。`,
 
 `R1(config)#interface e0/0
 R1(config-if)#ipv6 address ${vars.r1Ipv6}
@@ -637,9 +676,13 @@ R1(config-if)#ipv6 address ${vars.r1Ipv6}
 R2(config)#interface e0/0
 R2(config-if)#ipv6 address ${vars.r2Ipv6}
 
-【解説】IPv6アドレス（/126）の計算方法
-指定されたIPv6ネットワーク（${vars.ipv6Subnet}）から、割り当て可能な最初と最後のホストIPアドレスを算出します。
-ホスト部が2ビットのため、最初のアドレスが「1」、最後が「3」となります。`
+【解説】IPv6 (${vars.ipv6Subnet}) の計算:
+プレフィックス長 /${vars.ipv6Prefix} のため、ホスト部は 128 - ${vars.ipv6Prefix} = ${vars.hostBits6} ビットです。
+ホストのパターン数は 2の${vars.hostBits6}乗 = ${vars.blockSize6} 個となります。
+ネットワークアドレスの末尾が（16進数で） ${vars.netOffset6 === 0 ? '0' : vars.netOffset6.toString(16)} なので、
+・最初のアドレスは +1 した「${vars.firstHost6Hex}」
+・最後のアドレスは +${vars.blockSize6}-1 した「${vars.lastHost6Hex}」
+となります。`
     ],
     devices: [
       { name: "R1", type: "router", physicalPorts: ["Ethernet0/0"] },
